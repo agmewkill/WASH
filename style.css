@@ -59,6 +59,7 @@ button {
   padding: 10px;
   border-radius: 8px;
   margin-bottom: 10px;
+  line-height: 1.35;
 }
 
 .mode {
