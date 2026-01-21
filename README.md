@@ -1,4 +1,4 @@
-#Public Restrooms Map — San Diego
+# Public Restrooms Map — San Diego
 
 An interactive, public-facing map that displays restroom locations in San Diego and allows community members to **suggest new locations or updates**. All submissions are **reviewed before appearing on the map**.
 
@@ -10,7 +10,7 @@ This project is designed to be:
 
 ---
 
-##What this project does
+## What this project does
 
 - Displays a **baseline dataset** of public restrooms on an interactive map
 - Allows the public to:
@@ -24,7 +24,7 @@ The map and form are hosted as a **static website** using GitHub Pages.
 
 ---
 
-##Live map
+## Live map
 https://agmewkill.github.io/sd-restrooms-map/
 
 ###Key principles
