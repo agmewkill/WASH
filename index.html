@@ -12,14 +12,16 @@
     <div id="map"></div>
 
     <aside id="panel">
-      <h2>Submit / Update</h2>
+      <h2>Contribute Information</h2>
 
       <div class="hint">
-        Click the map to add a point. Click an existing marker to suggest an update.
-        Submissions appear on the public map after review.
+        Use the map to contribute information.<br>
+        • Click <strong>anywhere on the map</strong> to add a new restroom<br>
+        • Click an <strong>existing restroom</strong> to suggest a change<br><br>
+        All submissions are reviewed before appearing on the public map.
       </div>
 
-      <div id="modeIndicator" class="mode new">Adding a new restroom</div>
+      <div id="modeIndicator" class="mode new">Suggest a new restroom location</div>
 
       <form id="surveyForm">
         <input type="hidden" id="place_id" name="place_id" />
@@ -73,7 +75,7 @@
           <textarea id="notes" name="notes" rows="4" placeholder="Anything helpful for the public…"></textarea>
         </label>
 
-        <button type="submit" id="submitBtn">Submit</button>
+        <button type="submit" id="submitBtn">Submit suggestion</button>
         <div id="status" aria-live="polite"></div>
       </form>
     </aside>
