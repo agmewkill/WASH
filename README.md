@@ -27,7 +27,7 @@ The map and form are hosted as a **static website** using GitHub Pages.
 ## Live map
 https://agmewkill.github.io/sd-restrooms-map/
 
-###Key principles
+### Key principles
 - Baseline data is **never overwritten**
 - All public input is **append-only**
 - Updates are merged using a stable internal ID (`GlobalID`)
@@ -68,4 +68,3 @@ For each submission, maintainers may:
 - Add review notes (optional)
 - Approve or reject the submission
 
-To approve a submission, the maintainer sets:
