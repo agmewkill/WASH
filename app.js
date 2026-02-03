@@ -1,3 +1,5 @@
+alert("app.js loaded");
+
 /* ================= CONFIG ================= */
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwTUAGegDO_w2Hh1W0aPiFTmiVlYF-8zfMX_M4QQ_AyaPaB2HlETTOMq1xseZk9Y_Xpsw/exec";
