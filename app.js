@@ -1,6 +1,8 @@
-document.addEventListener("DOMContentLoaded", () => {
-  alert("app.js loaded"); // remove after testing
+/* app.js (cleaned) */
+/* — boot after DOM ready, initialize map early, safe element lookups, submit handler, CSV merge — */
 
+document.addEventListener("DOMContentLoaded", () => {
+  /* ---------------- CONFIG ---------------- */
   const APPS_SCRIPT_URL =
     "https://script.google.com/macros/s/AKfycbwTUAGegDO_w2Hh1W0aPiFTmiVlYF-8zfMX_M4QQ_AyaPaB2HlETTOMq1xseZk9Y_Xpsw/exec";
 
@@ -9,21 +11,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const BASELINE_CSV_URL = "data/restrooms_baseline_public.csv";
 
+  /* ---------------- HELPERS ---------------- */
   const $ = (id) => document.getElementById(id);
   const toBool = v => ["true","yes","1"].includes(String(v).toLowerCase());
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
     ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])
   );
 
-  // ---- REQUIRED elements ----
+  /* ---------------- ELEMENTS ---------------- */
   const panel = $("panel");
   const form = $("surveyForm");
   const submitBtn = $("submitBtn");
   const statusEl = $("status");
 
-  // If any of these are missing, show a helpful error instead of crashing
+  // sanity-check required elements
   if (!panel || !form || !submitBtn || !statusEl) {
-    alert("Missing required element(s): panel/form/submitBtn/status. Check IDs in index.html.");
+    console.error("Missing required form/panel elements. Check IDs in index.html.");
     return;
   }
 
@@ -55,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const outsideEl = $("outside_context");
   const notesEl = $("notes");
 
-  // ---- MAP (initialize AFTER DOM is ready) ----
+  /* ---------------- MAP (init early) ---------------- */
   const map = L.map("map").setView([32.7157, -117.1611], 12);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -64,11 +67,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const markersLayer = L.layerGroup().addTo(map);
 
-  // ---- Panel helpers ----
+  /* ---------------- PANEL helpers ---------------- */
   const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 
   function openPanel() {
     if (isMobile()) panel.classList.add("open");
+    // ensure map redraw if panel covers part of viewport
+    setTimeout(() => map.invalidateSize(), 250);
+  }
+
+  function closePanel() {
+    if (isMobile()) panel.classList.remove("open");
     setTimeout(() => map.invalidateSize(), 250);
   }
 
@@ -84,13 +93,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const m = $("modeIndicator");
     if (!m) return;
     m.className = (mode === "update") ? "mode update" : "mode new";
+    m.hidden = false;
+    m.textContent = (mode === "update") ? "Suggest a change to this restroom" : "Suggest a new restroom location";
   }
 
+  /* ---------------- CSV loader ---------------- */
   async function loadCsv(url) {
     const t = await (await fetch(url)).text();
     return Papa.parse(t, { header: true, skipEmptyLines: true }).data;
   }
 
+  /* ---------------- MARKERS ---------------- */
   function popupHtml(r) {
     return `
       <strong>${esc(r.restroom_name || r.name)}</strong><br>
@@ -103,14 +116,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function drawMarkers(rows) {
     markersLayer.clearLayers();
     rows.forEach(r => {
-      const lat = +r.latitude, lng = +r.longitude;
+      const lat = +r.latitude;
+      const lng = +r.longitude;
       if (!lat || !lng) return;
 
       const m = L.marker([lat, lng]).addTo(markersLayer);
       m.bindPopup(popupHtml(r));
 
       m.on("popupopen", e => {
-        e.popup.getElement().querySelector("[data-update]").onclick = () => {
+        const btn = e.popup.getElement().querySelector("[data-update]");
+        if (btn) btn.onclick = () => {
           fillForm(r, "update");
           openPanel();
         };
@@ -118,6 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ---------------- FORM fill ---------------- */
   function fillForm(r, mode) {
     placeIdEl.value = r.globalid || r.place_id || "";
     actionEl.value = mode;
@@ -156,9 +172,21 @@ document.addEventListener("DOMContentLoaded", () => {
     openPanel();
   });
 
+  /* ---------------- newRestroomBtn ---------------- */
+  $("newRestroomBtn")?.addEventListener("click", () => {
+    form.reset();
+    actionEl.value = "new";
+    setMode("new");
+    openPanel();
+    // focus first obvious field so keyboard appears on mobile
+    setTimeout(() => restroomNameEl?.focus(), 250);
+  });
+
+  /* ---------------- SUBMIT ---------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // Browser native validation (works on mobile)
     if (!form.reportValidity()) {
       const invalid = form.querySelector(":invalid");
       if (invalid) {
@@ -216,6 +244,8 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.disabled = false;
       form.reset();
       setMode("new");
+      // on mobile, close the panel after submit
+      if (isMobile()) closePanel();
     } catch (err) {
       console.error(err);
       statusEl.textContent = "Submit failed. Please check your connection and try again.";
@@ -224,20 +254,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ---- INIT ----
+  /* ---------------- INIT (load CSVs and draw markers) ---------------- */
   (async () => {
-    const baseline = await loadCsv(BASELINE_CSV_URL);
-    const updates = (await loadCsv(UPDATES_CSV_URL)).filter(r => toBool(r.approved));
+    try {
+      const baseline = await loadCsv(BASELINE_CSV_URL);
+      const updates = (await loadCsv(UPDATES_CSV_URL)).filter(r => toBool(r.approved));
 
-    const latest = {};
-    updates.forEach(u => {
-      if (!u.place_id) return;
-      if (!latest[u.place_id] || Date.parse(u.timestamp) > Date.parse(latest[u.place_id].timestamp)) {
-        latest[u.place_id] = u;
-      }
-    });
+      const latest = {};
+      updates.forEach(u => {
+        if (!u.place_id) return;
+        if (!latest[u.place_id] || Date.parse(u.timestamp) > Date.parse(latest[u.place_id].timestamp)) {
+          latest[u.place_id] = u;
+        }
+      });
 
-    const merged = baseline.map(b => latest[b.globalid] ? { ...b, ...latest[b.globalid] } : b);
-    drawMarkers(merged);
+      const merged = baseline.map(b => latest[b.globalid] ? { ...b, ...latest[b.globalid] } : b);
+      drawMarkers(merged);
+    } catch (err) {
+      console.error("Failed to load baseline or updates CSV:", err);
+    }
   })();
 });
