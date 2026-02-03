@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusEl = $("status");
 
   if (!panel || !form || !submitBtn || !statusEl) {
-    console.error("Missing required elements (#panel, #surveyForm, #submitBtn, #status). Check index.html IDs.");
+    console.error("Missing required elements (#panel, #surveyForm, #submitBtn, #status).");
     return;
   }
 
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- MAP ---------------- */
   const leafletMap = L.map("map").setView([32.7157, -117.1611], 12);
-  window.leafletMap = leafletMap; // safe global name (does not collide with #map)
+  window.leafletMap = leafletMap;
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -84,12 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 
   function openPanel() {
-    if (isMobile()) panel.classList.add("open");
-    setTimeout(safeInvalidate, 250);
-  }
-
-  function closePanel() {
-    if (isMobile()) panel.classList.remove("open");
+    panel.classList.add("open");
     setTimeout(safeInvalidate, 250);
   }
 
@@ -99,17 +94,17 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(safeInvalidate, 250);
   }
 
-  const drawerHeader = $("drawerHeader");
-  if (drawerHeader) drawerHeader.addEventListener("click", togglePanel);
+  $("drawerHeader")?.addEventListener("click", togglePanel);
 
   function setMode(mode) {
     const m = $("modeIndicator");
     if (!m) return;
     m.className = mode === "update" ? "mode update" : "mode new";
     m.hidden = false;
-    m.textContent = mode === "update"
-      ? "Suggest a change to this restroom"
-      : "Suggest a new restroom location";
+    m.textContent =
+      mode === "update"
+        ? "Suggest a change to this restroom"
+        : "Suggest a new restroom location";
   }
 
   /* ---------------- CSV ---------------- */
@@ -189,16 +184,13 @@ document.addEventListener("DOMContentLoaded", () => {
     openPanel();
   });
 
-  const newBtn = $("newRestroomBtn");
-  if (newBtn) {
-    newBtn.addEventListener("click", () => {
-      form.reset();
-      actionEl.value = "new";
-      setMode("new");
-      openPanel();
-      setTimeout(() => restroomNameEl && restroomNameEl.focus(), 200);
-    });
-  }
+  $("newRestroomBtn")?.addEventListener("click", () => {
+    form.reset();
+    actionEl.value = "new";
+    setMode("new");
+    openPanel();
+    setTimeout(() => restroomNameEl?.focus(), 200);
+  });
 
   /* ---------------- SUBMIT ---------------- */
   form.addEventListener("submit", async (e) => {
@@ -207,8 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!form.reportValidity()) {
       const invalid = form.querySelector(":invalid");
       if (invalid) {
-        const d = invalid.closest("details");
-        if (d) d.open = true;
+        invalid.closest("details")?.open = true;
         invalid.scrollIntoView({ behavior: "smooth", block: "center" });
         invalid.focus({ preventScroll: true });
       }
@@ -257,12 +248,18 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(payload),
       });
 
-      statusEl.textContent = "Thanks! Your suggestion will appear after review.";
+      statusEl.textContent = "Submitted ✓ Thank you!";
       submitBtn.textContent = "Submit suggestion";
       submitBtn.disabled = false;
+
       form.reset();
       setMode("new");
-      if (isMobile()) closePanel();
+
+      // 🔑 KEEP PANEL OPEN (desktop + mobile)
+      panel.classList.add("open");
+      panel.scrollTop = 0;
+
+      setTimeout(safeInvalidate, 250);
     } catch (err) {
       console.error(err);
       statusEl.textContent = "Submit failed. Please check your connection and try again.";
@@ -285,7 +282,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
-      const merged = baseline.map((b) => (latest[b.globalid] ? { ...b, ...latest[b.globalid] } : b));
+      const merged = baseline.map((b) =>
+        latest[b.globalid] ? { ...b, ...latest[b.globalid] } : b
+      );
+
       drawMarkers(merged);
       setTimeout(safeInvalidate, 200);
     } catch (err) {
