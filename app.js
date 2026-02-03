@@ -1,6 +1,3 @@
-/* app.js (with global map + resize/load invalidateSize) */
-/* Boot after DOM ready, initialize map early, safe element lookups, submit handler, CSV merge */
-
 document.addEventListener("DOMContentLoaded", () => {
   /* ---------------- CONFIG ---------------- */
   const APPS_SCRIPT_URL =
@@ -13,10 +10,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- HELPERS ---------------- */
   const $ = (id) => document.getElementById(id);
-  const toBool = v => ["true","yes","1"].includes(String(v).toLowerCase());
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
-    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])
-  );
+  const toBool = (v) => ["true", "yes", "1"].includes(String(v).toLowerCase());
+  const esc = (s) =>
+    String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[c]));
 
   /* ---------------- ELEMENTS ---------------- */
   const panel = $("panel");
@@ -24,9 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitBtn = $("submitBtn");
   const statusEl = $("status");
 
-  // sanity-check required elements
   if (!panel || !form || !submitBtn || !statusEl) {
-    console.error("Missing required form/panel elements. Check IDs in index.html.");
+    console.error("Missing required elements (#panel, #surveyForm, #submitBtn, #status). Check index.html IDs.");
     return;
   }
 
@@ -58,56 +59,60 @@ document.addEventListener("DOMContentLoaded", () => {
   const outsideEl = $("outside_context");
   const notesEl = $("notes");
 
-  /* ---------------- MAP (init early) ---------------- */
-  const map = L.map("map").setView([32.7157, -117.1611], 12);
-
-  // Expose map globally so console or other scripts can call map.invalidateSize()
-  window.map = map;
+  /* ---------------- MAP ---------------- */
+  const leafletMap = L.map("map").setView([32.7157, -117.1611], 12);
+  window.leafletMap = leafletMap; // safe global name (does not collide with #map)
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors"
-  }).addTo(map);
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(leafletMap);
 
-  const markersLayer = L.layerGroup().addTo(map);
-  // expose markersLayer too
-  window.markersLayer = markersLayer;
+  const leafletMarkers = L.layerGroup().addTo(leafletMap);
+  window.leafletMarkers = leafletMarkers;
 
-  /* Ensure Leaflet recalculates tile sizes after layout changes */
-  window.addEventListener('load', () => setTimeout(() => window.map?.invalidateSize(), 250));
-  window.addEventListener('resize', () => setTimeout(() => window.map?.invalidateSize(), 120));
+  function safeInvalidate() {
+    try {
+      leafletMap.invalidateSize();
+    } catch (_) {}
+  }
 
-  /* ---------------- PANEL helpers ---------------- */
+  window.addEventListener("load", () => setTimeout(safeInvalidate, 250));
+  window.addEventListener("resize", () => setTimeout(safeInvalidate, 120));
+
+  /* ---------------- PANEL ---------------- */
   const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 
   function openPanel() {
     if (isMobile()) panel.classList.add("open");
-    // ensure map redraw if panel covers part of viewport
-    setTimeout(() => map.invalidateSize(), 250);
+    setTimeout(safeInvalidate, 250);
   }
 
   function closePanel() {
     if (isMobile()) panel.classList.remove("open");
-    setTimeout(() => map.invalidateSize(), 250);
+    setTimeout(safeInvalidate, 250);
   }
 
   function togglePanel() {
     if (!isMobile()) return;
     panel.classList.toggle("open");
-    setTimeout(() => map.invalidateSize(), 250);
+    setTimeout(safeInvalidate, 250);
   }
 
-  $("drawerHeader")?.addEventListener("click", togglePanel);
+  const drawerHeader = $("drawerHeader");
+  if (drawerHeader) drawerHeader.addEventListener("click", togglePanel);
 
   function setMode(mode) {
     const m = $("modeIndicator");
     if (!m) return;
-    m.className = (mode === "update") ? "mode update" : "mode new";
+    m.className = mode === "update" ? "mode update" : "mode new";
     m.hidden = false;
-    m.textContent = (mode === "update") ? "Suggest a change to this restroom" : "Suggest a new restroom location";
+    m.textContent = mode === "update"
+      ? "Suggest a change to this restroom"
+      : "Suggest a new restroom location";
   }
 
-  /* ---------------- CSV loader ---------------- */
+  /* ---------------- CSV ---------------- */
   async function loadCsv(url) {
     const t = await (await fetch(url)).text();
     return Papa.parse(t, { header: true, skipEmptyLines: true }).data;
@@ -124,26 +129,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawMarkers(rows) {
-    markersLayer.clearLayers();
-    rows.forEach(r => {
+    leafletMarkers.clearLayers();
+    rows.forEach((r) => {
       const lat = +r.latitude;
       const lng = +r.longitude;
       if (!lat || !lng) return;
 
-      const m = L.marker([lat, lng]).addTo(markersLayer);
+      const m = L.marker([lat, lng]).addTo(leafletMarkers);
       m.bindPopup(popupHtml(r));
 
-      m.on("popupopen", e => {
+      m.on("popupopen", (e) => {
         const btn = e.popup.getElement().querySelector("[data-update]");
-        if (btn) btn.onclick = () => {
-          fillForm(r, "update");
-          openPanel();
-        };
+        if (btn) {
+          btn.onclick = () => {
+            fillForm(r, "update");
+            openPanel();
+          };
+        }
       });
     });
   }
 
-  /* ---------------- FORM fill ---------------- */
+  /* ---------------- FORM FILL ---------------- */
   function fillForm(r, mode) {
     placeIdEl.value = r.globalid || r.place_id || "";
     actionEl.value = mode;
@@ -177,30 +184,31 @@ document.addEventListener("DOMContentLoaded", () => {
     notesEl.value = r.notes || "";
   }
 
-  map.on("click", e => {
+  leafletMap.on("click", (e) => {
     fillForm({ latitude: e.latlng.lat, longitude: e.latlng.lng }, "new");
     openPanel();
   });
 
-  /* ---------------- newRestroomBtn ---------------- */
-  $("newRestroomBtn")?.addEventListener("click", () => {
-    form.reset();
-    actionEl.value = "new";
-    setMode("new");
-    openPanel();
-    // focus first obvious field so keyboard appears on mobile
-    setTimeout(() => restroomNameEl?.focus(), 250);
-  });
+  const newBtn = $("newRestroomBtn");
+  if (newBtn) {
+    newBtn.addEventListener("click", () => {
+      form.reset();
+      actionEl.value = "new";
+      setMode("new");
+      openPanel();
+      setTimeout(() => restroomNameEl && restroomNameEl.focus(), 200);
+    });
+  }
 
   /* ---------------- SUBMIT ---------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Browser native validation (works on mobile)
     if (!form.reportValidity()) {
       const invalid = form.querySelector(":invalid");
       if (invalid) {
-        invalid.closest("details")?.open = true;
+        const d = invalid.closest("details");
+        if (d) d.open = true;
         invalid.scrollIntoView({ behavior: "smooth", block: "center" });
         invalid.focus({ preventScroll: true });
       }
@@ -239,14 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
       access_barriers: accessBarriersEl.value,
       overall_impressions: impressionsEl.value,
       outside_context: outsideEl.value,
-      notes: notesEl.value
+      notes: notesEl.value,
     };
 
     try {
       await fetch(APPS_SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       statusEl.textContent = "Thanks! Your suggestion will appear after review.";
@@ -254,7 +262,6 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.disabled = false;
       form.reset();
       setMode("new");
-      // on mobile, close the panel after submit
       if (isMobile()) closePanel();
     } catch (err) {
       console.error(err);
@@ -264,24 +271,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /* ---------------- INIT (load CSVs and draw markers) ---------------- */
+  /* ---------------- INIT ---------------- */
   (async () => {
     try {
       const baseline = await loadCsv(BASELINE_CSV_URL);
-      const updates = (await loadCsv(UPDATES_CSV_URL)).filter(r => toBool(r.approved));
+      const updates = (await loadCsv(UPDATES_CSV_URL)).filter((r) => toBool(r.approved));
 
       const latest = {};
-      updates.forEach(u => {
+      updates.forEach((u) => {
         if (!u.place_id) return;
         if (!latest[u.place_id] || Date.parse(u.timestamp) > Date.parse(latest[u.place_id].timestamp)) {
           latest[u.place_id] = u;
         }
       });
 
-      const merged = baseline.map(b => latest[b.globalid] ? { ...b, ...latest[b.globalid] } : b);
+      const merged = baseline.map((b) => (latest[b.globalid] ? { ...b, ...latest[b.globalid] } : b));
       drawMarkers(merged);
+      setTimeout(safeInvalidate, 200);
     } catch (err) {
-      console.error("Failed to load baseline or updates CSV:", err);
+      console.error("Failed to load baseline/updates CSV:", err);
     }
   })();
 });
