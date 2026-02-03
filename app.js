@@ -210,3 +210,25 @@ document.getElementById("surveyForm").onsubmit = async e => {
 
   drawMarkers(merged);
 })();
+// iPhone-friendly: reveal what field is blocking submit
+const form = document.getElementById("surveyForm");
+const submit = document.getElementById("submitBtn") || form.querySelector('button[type="submit"]');
+
+submit.addEventListener("click", () => {
+  // Triggers built-in validation UI
+  if (form.reportValidity()) return;
+
+  // Find first invalid field and open its <details>
+  const firstInvalid = form.querySelector(":invalid");
+  if (firstInvalid) {
+    const details = firstInvalid.closest("details");
+    if (details) details.open = true;
+
+    // Make it obvious which field is failing
+    firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+    firstInvalid.focus({ preventScroll: true });
+
+    // Temporary: also show its id so you can fix fast
+    alert("Missing/invalid field: " + (firstInvalid.id || firstInvalid.name || firstInvalid.tagName));
+  }
+});
