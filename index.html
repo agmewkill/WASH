@@ -10,26 +10,55 @@
 </head>
 <body>
   <div id="layout">
-    <div id="map" aria-label="Map of public restrooms in San Diego"></div>
+    <div id="map"></div>
 
-    <aside id="panel" aria-label="Restroom survey panel">
+    <aside id="panel">
       <!-- Mobile drawer handle -->
-      <div class="drawerHeader" id="drawerHeader" aria-hidden="true">
+      <div class="drawerHeader" id="drawerHeader">
         <div class="drawerHandle"></div>
       </div>
 
       <h2>Public Restrooms — San Diego</h2>
 
       <div class="hint">
-        Use the map to contribute information on public restrooms in San Diego County.<br>
-        • Click <strong>anywhere on the map</strong> to suggest a new restroom<br>
-        • Click an <strong>existing restroom</strong> to suggest a change<br><br>
-        All submissions are reviewed before appearing on the public map.
+        <p>
+          Hello and thank you for volunteering to document water, sanitation, and hygiene access
+          in San Diego communities with the Project for Sanitation Justice team.
+        </p>
+
+        <p>Use the map to contribute information on public restrooms in San Diego County:</p>
+
+        <ul>
+          <li>Click anywhere on the map to suggest a new restroom location</li>
+          <li>Click an existing restroom to suggest a change</li>
+        </ul>
+
+        <p>
+          Please conduct this audit by evaluating both the exterior and interior of the facility.
+          If the restroom is open when you arrive, indicate this in the form and additional
+          questions will appear regarding the interior.
+        </p>
+
+        <p>
+          Be prepared for this assessment to take some time — potentially 30 minutes or more
+          per facility.
+        </p>
+
+        <p>
+          All submissions are reviewed before appearing on the public map.
+        </p>
+
+        <p class="contact">
+          Questions: Dr. Megan Welsh Carroll —
+          <a href="mailto:mwelsh@sdsu.edu">mwelsh@sdsu.edu</a>
+        </p>
       </div>
 
-      <div id="modeIndicator" class="mode new">
+      <button id="newRestroomBtn" class="primaryAction">
         Suggest a new restroom location
-      </div>
+      </button>
+
+      <div id="modeIndicator" class="mode new" hidden></div>
 
       <form id="surveyForm">
         <input type="hidden" id="place_id" />
@@ -38,28 +67,28 @@
         <details open>
           <summary>Basics</summary>
 
-          <label>Date and time of audit <span aria-hidden="true">*</span>
+          <label>Date and time of audit *
             <input id="audit_datetime" type="datetime-local" required />
           </label>
 
-          <label>Name of Restroom <span aria-hidden="true">*</span>
-            <input id="restroom_name" placeholder="e.g., Balboa Park – near museum" required />
+          <label>Name of Restroom *
+            <input id="restroom_name" required />
           </label>
 
-          <label>Researcher Name <span aria-hidden="true">*</span>
-            <input id="researcher_name" placeholder="Your name" required />
+          <label>Researcher Name *
+            <input id="researcher_name" required />
           </label>
 
           <label>Address / Nearby landmark
-            <input id="address" placeholder="Street or nearby landmark" />
+            <input id="address" />
           </label>
 
           <div class="row2">
-            <label>Latitude <span aria-hidden="true">*</span>
-              <input id="latitude" inputmode="decimal" required />
+            <label>Latitude *
+              <input id="latitude" required />
             </label>
-            <label>Longitude <span aria-hidden="true">*</span>
-              <input id="longitude" inputmode="decimal" required />
+            <label>Longitude *
+              <input id="longitude" required />
             </label>
           </div>
         </details>
@@ -67,32 +96,30 @@
         <details>
           <summary>Access & finding it</summary>
 
-          <label>Is the bathroom facility open when you visited it? <span aria-hidden="true">*</span>
+          <label>Is the restroom open when you visited it? *
             <select id="open_when_visited" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
 
-          <label>What are the hours? <span aria-hidden="true">*</span>
-            <input id="advertised_hours" placeholder="e.g., 8am–6pm" required />
+          <label>What are the hours? *
+            <input id="advertised_hours" required />
           </label>
 
-          <!-- CHANGED TO DROPDOWN -->
-          <label>Confirm how this bathroom is accessed <span aria-hidden="true">*</span>
+          <label>How is this bathroom accessed? *
             <select id="access_method" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Accessed from outside the building</option>
               <option>Accessed from inside the building</option>
               <option>Employee Access Only</option>
             </select>
           </label>
 
-          <!-- CHANGED TO DROPDOWN -->
-          <label>Was this restroom facility easy to find/locate? <span aria-hidden="true">*</span>
+          <label>Was this restroom easy to find? *
             <select id="findability" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Easily Visible</option>
               <option>Somewhat visible</option>
               <option>Somewhat hard to find</option>
@@ -104,87 +131,85 @@
         <details>
           <summary>Amenities & safety</summary>
 
-          <label>Is there a gender neutral restroom available? <span aria-hidden="true">*</span>
+          <label>Gender-neutral restroom available? *
             <select id="gender_neutral" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
 
-          <label>Are there menstrual products available? <span aria-hidden="true">*</span>
+          <label>Menstrual products available? *
             <select id="menstrual_products" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
 
-          <label>Are there showers available? <span aria-hidden="true">*</span>
+          <label>Showers available? *
             <select id="showers_available" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
 
-          <label>Is there a water fountain or bottle refill station nearby? <span aria-hidden="true">*</span>
+          <label>Water refill nearby? *
             <select id="water_refill_nearby" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
 
-          <label>Is there visible signage posted regarding where this restroom is located? <span aria-hidden="true">*</span>
+          <label>Visible signage? *
             <select id="visible_signage" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
-            <small>This includes signage at the restroom and along the approach where someone might be looking.</small>
           </label>
 
-          <label>Are there security cameras? <span aria-hidden="true">*</span>
+          <label>Security cameras present? *
             <select id="security_cameras" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
 
-          <label>Is this bathroom ADA accessible? <span aria-hidden="true">*</span>
+          <label>ADA accessible? *
             <select id="ada_accessible" required>
-              <option value="" selected>—</option>
+              <option value="">—</option>
               <option>Yes</option>
               <option>No</option>
             </select>
-            <small>Optionally record door frame width, stall width, and distance to sink in notes below.</small>
           </label>
         </details>
 
         <details>
           <summary>Observations</summary>
 
-          <label>Are there any other barriers to access to this facility not otherwise noted, based on your external assessment?
-            <textarea id="access_barriers" rows="3" placeholder="Examples: security presence, need to ask for this facility to be unlocked, not physically accessible."></textarea>
+          <label>Other barriers to access
+            <textarea id="access_barriers"></textarea>
           </label>
 
-          <label>What are your overall impressions of this facility?
-            <textarea id="overall_impressions" rows="3" placeholder="Cleanliness, odor, upkeep, notable features/obstacles, etc."></textarea>
+          <label>Overall impressions
+            <textarea id="overall_impressions"></textarea>
           </label>
 
-          <label>What is the appearance around the outside of this restroom? Are there people in/around the facility when you are there? What were those people doing?
-            <textarea id="outside_context" rows="4" placeholder="Describe the surrounding area and activity level."></textarea>
+          <label>Outside appearance & activity
+            <textarea id="outside_context"></textarea>
           </label>
 
           <label>Additional notes
-            <textarea id="notes" rows="4"></textarea>
+            <textarea id="notes"></textarea>
           </label>
         </details>
 
-        <button type="submit" id="submitBtn">Submit suggestion</button>
-        <div id="status" aria-live="polite"></div>
+        <button type="submit">Submit suggestion</button>
+        <div id="status"></div>
       </form>
     </aside>
   </div>
