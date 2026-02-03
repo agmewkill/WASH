@@ -72,7 +72,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
           </label>
 
@@ -80,20 +79,26 @@
             <input id="advertised_hours" placeholder="e.g., 8am–6pm" required />
           </label>
 
-          <label>Confirm how this bathroom is accessed <span aria-hidden="true">*</span></label>
-          <div class="radioGroup" role="radiogroup" aria-label="Access method">
-            <label><input type="radio" name="access_method" value="Accessed from outside the building" required /> Accessed from outside the building</label>
-            <label><input type="radio" name="access_method" value="Accessed from inside the building" /> Accessed from inside the building</label>
-            <label><input type="radio" name="access_method" value="Employee Access Only" /> Employee Access Only</label>
-          </div>
+          <!-- CHANGED TO DROPDOWN -->
+          <label>Confirm how this bathroom is accessed <span aria-hidden="true">*</span>
+            <select id="access_method" required>
+              <option value="" selected>—</option>
+              <option>Accessed from outside the building</option>
+              <option>Accessed from inside the building</option>
+              <option>Employee Access Only</option>
+            </select>
+          </label>
 
-          <label>Was this restroom facility easy to find/locate? <span aria-hidden="true">*</span></label>
-          <div class="radioGroup" role="radiogroup" aria-label="Findability">
-            <label><input type="radio" name="findability" value="Easily Visible" required /> Easily Visible</label>
-            <label><input type="radio" name="findability" value="Somewhat visible" /> Somewhat visible</label>
-            <label><input type="radio" name="findability" value="Somewhat hard to find" /> Somewhat hard to find</label>
-            <label><input type="radio" name="findability" value="Very hard to find" /> Very hard to find</label>
-          </div>
+          <!-- CHANGED TO DROPDOWN -->
+          <label>Was this restroom facility easy to find/locate? <span aria-hidden="true">*</span>
+            <select id="findability" required>
+              <option value="" selected>—</option>
+              <option>Easily Visible</option>
+              <option>Somewhat visible</option>
+              <option>Somewhat hard to find</option>
+              <option>Very hard to find</option>
+            </select>
+          </label>
         </details>
 
         <details>
@@ -104,7 +109,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
           </label>
 
@@ -113,7 +117,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
           </label>
 
@@ -122,7 +125,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
           </label>
 
@@ -131,7 +133,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
           </label>
 
@@ -140,7 +141,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
             <small>This includes signage at the restroom and along the approach where someone might be looking.</small>
           </label>
@@ -150,7 +150,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
           </label>
 
@@ -159,7 +158,6 @@
               <option value="" selected>—</option>
               <option>Yes</option>
               <option>No</option>
-              <option>Unknown</option>
             </select>
             <small>Optionally record door frame width, stall width, and distance to sink in notes below.</small>
           </label>
