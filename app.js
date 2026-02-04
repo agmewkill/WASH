@@ -72,9 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.leafletMarkers = leafletMarkers;
 
   function safeInvalidate() {
-    try {
-      leafletMap.invalidateSize();
-    } catch (_) {}
+    try { leafletMap.invalidateSize(); } catch (_) {}
   }
 
   window.addEventListener("load", () => setTimeout(safeInvalidate, 250));
@@ -84,17 +82,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 
   function openPanel() {
+    // On desktop panel is already visible, but keeping this is harmless
     panel.classList.add("open");
     setTimeout(safeInvalidate, 250);
+    updateMobileToggleLabel();
   }
 
-  function togglePanel() {
+  function togglePanelMobileOnly() {
     if (!isMobile()) return;
     panel.classList.toggle("open");
     setTimeout(safeInvalidate, 250);
+    updateMobileToggleLabel();
   }
 
-  $("drawerHeader")?.addEventListener("click", togglePanel);
+  $("drawerHeader")?.addEventListener("click", togglePanelMobileOnly);
 
   function setMode(mode) {
     const m = $("modeIndicator");
@@ -106,6 +107,31 @@ document.addEventListener("DOMContentLoaded", () => {
         ? "Suggest a change to this restroom"
         : "Suggest a new restroom location";
   }
+
+  /* ---------------- MOBILE TOGGLE (Map/Form) ---------------- */
+  const mobileToggleBtn = $("mobileToggleBtn");
+  const mobileToggleLabel = $("mobileToggleLabel");
+
+  function updateMobileToggleLabel() {
+    if (!mobileToggleBtn || !mobileToggleLabel) return;
+
+    // Only meaningful on mobile; CSS hides it on desktop
+    if (!isMobile()) return;
+
+    const isOpen = panel.classList.contains("open");
+    mobileToggleLabel.textContent = isOpen ? "Map" : "Form";
+  }
+
+  if (mobileToggleBtn) {
+    mobileToggleBtn.addEventListener("click", () => {
+      if (!isMobile()) return;
+      panel.classList.toggle("open");
+      updateMobileToggleLabel();
+      setTimeout(safeInvalidate, 250);
+    });
+  }
+
+  window.addEventListener("resize", updateMobileToggleLabel);
 
   /* ---------------- CSV ---------------- */
   async function loadCsv(url) {
@@ -255,9 +281,10 @@ document.addEventListener("DOMContentLoaded", () => {
       form.reset();
       setMode("new");
 
-      // 🔑 KEEP PANEL OPEN (desktop + mobile)
+      // Keep open (desktop + mobile)
       panel.classList.add("open");
       panel.scrollTop = 0;
+      updateMobileToggleLabel();
 
       setTimeout(safeInvalidate, 250);
     } catch (err) {
@@ -288,6 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       drawMarkers(merged);
       setTimeout(safeInvalidate, 200);
+      updateMobileToggleLabel();
     } catch (err) {
       console.error("Failed to load baseline/updates CSV:", err);
     }
