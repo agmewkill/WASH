@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusEl = $("status");
 
   if (!panel || !form || !submitBtn || !statusEl) {
-    console.error("Missing #panel, #surveyForm, #submitBtn, or #status in index.html");
+    console.error("Missing required elements (#panel, #surveyForm, #submitBtn, #status).");
     return;
   }
 
@@ -67,11 +67,10 @@ document.addEventListener("DOMContentLoaded", () => {
   try {
     leafletMap = L.map("map").setView([32.7157, -117.1611], 12);
   } catch (e) {
-    console.error("Leaflet failed to initialize. Check leaflet.js loaded.", e);
+    console.error("Leaflet failed to initialize.", e);
     return;
   }
 
-  // safe global name (avoid colliding with #map id)
   window.leafletMap = leafletMap;
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -82,36 +81,45 @@ document.addEventListener("DOMContentLoaded", () => {
   const leafletMarkers = L.layerGroup().addTo(leafletMap);
 
   function safeInvalidate() {
-    try {
-      leafletMap.invalidateSize();
-    } catch (_) {}
+    try { leafletMap.invalidateSize(); } catch (_) {}
   }
 
   window.addEventListener("load", () => setTimeout(safeInvalidate, 250));
   window.addEventListener("resize", () => setTimeout(safeInvalidate, 120));
 
-  /* ---------------- PANEL OPEN/CLOSE (MOBILE) ---------------- */
+  /* ---------------- DRAFT MARKER ---------------- */
+  let draftMarker = null;
+
+  function setDraftMarker(lat, lng) {
+    if (draftMarker) {
+      leafletMap.removeLayer(draftMarker);
+      draftMarker = null;
+    }
+
+    draftMarker = L.marker([lat, lng], { keyboard: false }).addTo(leafletMap);
+    draftMarker.bindPopup("New restroom location").openPopup();
+  }
+
+  function clearDraftMarker() {
+    if (draftMarker) {
+      leafletMap.removeLayer(draftMarker);
+      draftMarker = null;
+    }
+  }
+
+  /* ---------------- PANEL CONTROL ---------------- */
   function openPanel() {
     if (isMobile()) panel.classList.add("open");
     setTimeout(safeInvalidate, 250);
-    updateMobileToggleLabel();
-  }
-
-  function closePanel() {
-    if (isMobile()) panel.classList.remove("open");
-    setTimeout(safeInvalidate, 250);
-    updateMobileToggleLabel();
   }
 
   function togglePanel() {
     if (!isMobile()) return;
     panel.classList.toggle("open");
     setTimeout(safeInvalidate, 250);
-    updateMobileToggleLabel();
   }
 
-  const drawerHeader = $("drawerHeader");
-  if (drawerHeader) drawerHeader.addEventListener("click", togglePanel);
+  $("drawerHeader")?.addEventListener("click", togglePanel);
 
   /* ---------------- MODE INDICATOR ---------------- */
   function setMode(mode) {
@@ -124,22 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ? "Suggest a change to this restroom"
         : "Suggest a new restroom location";
   }
-
-  /* ---------------- MOBILE TOGGLE BUTTON ---------------- */
-  const mobileToggleBtn = $("mobileToggleBtn");
-  const mobileToggleLabel = $("mobileToggleLabel");
-
-  function updateMobileToggleLabel() {
-    if (!mobileToggleLabel) return;
-    if (!isMobile()) return; // button hidden by CSS
-    const open = panel.classList.contains("open");
-    // if panel open, next action is to view MAP
-    mobileToggleLabel.textContent = open ? "Map" : "Form";
-  }
-
-  if (mobileToggleBtn) mobileToggleBtn.addEventListener("click", togglePanel);
-  window.addEventListener("resize", updateMobileToggleLabel);
-  updateMobileToggleLabel();
 
   /* ---------------- CSV LOADING ---------------- */
   async function loadCsv(url) {
@@ -176,6 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!btn) return;
 
         btn.onclick = () => {
+          clearDraftMarker(); // don’t show draft pin when editing existing
           fillForm(r, "update");
           openPanel();
         };
@@ -220,7 +213,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- MAP CLICK -> NEW RESTROOM ---------------- */
   leafletMap.on("click", (e) => {
-    fillForm({ latitude: e.latlng.lat, longitude: e.latlng.lng }, "new");
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+
+    setDraftMarker(lat, lng);     // 👈 show pin
+    fillForm({ latitude: lat, longitude: lng }, "new");
     openPanel();
   });
 
@@ -228,6 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const newRestroomBtn = $("newRestroomBtn");
   if (newRestroomBtn) {
     newRestroomBtn.addEventListener("click", () => {
+      clearDraftMarker();
       form.reset();
       if (actionEl) actionEl.value = "new";
       setMode("new");
@@ -242,7 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Browser validation (helps mobile)
     if (!form.reportValidity()) {
       const invalid = form.querySelector(":invalid");
       if (invalid) {
@@ -300,16 +297,13 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.textContent = "Submit suggestion";
       submitBtn.disabled = false;
 
-      // reset + KEEP PANEL OPEN (mobile + desktop)
       form.reset();
       setMode("new");
       panel.scrollTop = 0;
 
-      if (isMobile()) {
-        panel.classList.add("open"); // keep open on mobile
-      }
+      clearDraftMarker();  // 👈 remove the temporary pin after submit
 
-      updateMobileToggleLabel();
+      if (isMobile()) panel.classList.add("open");
       setTimeout(safeInvalidate, 250);
     } catch (err) {
       console.error(err);
@@ -345,14 +339,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       drawMarkers(merged);
       setTimeout(safeInvalidate, 200);
-      updateMobileToggleLabel();
-
-      // if you want the form to start open on mobile:
-      if (isMobile()) {
-        panel.classList.add("open");
-        updateMobileToggleLabel();
-        setTimeout(safeInvalidate, 250);
-      }
     } catch (err) {
       console.error("Failed to load baseline/updates CSV:", err);
     }
