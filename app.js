@@ -377,7 +377,14 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       drawMarkers(merged);
-      setTimeout(safeInvalidate, 200);
+setTimeout(safeInvalidate, 200);
+
+// 🔑 Ensure panel is visible on mobile on first load
+if (isMobile()) {
+  panel.classList.add("open");
+  setTimeout(safeInvalidate, 250);
+}
+
     } catch (err) {
       console.error("Failed to load baseline/updates CSV:", err);
     }
