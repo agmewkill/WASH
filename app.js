@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  /* ---------------- CONFIG ---------------- */
   const APPS_SCRIPT_URL =
     "https://script.google.com/macros/s/AKfycbzwaED1ncgYe5hJ0nH9VBJkKiPP6CBNd1jup9GhlJUgXn8wraoTW6FmqYI-Pl07_eilbQ/exec";
 
@@ -8,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const BASELINE_CSV_URL = "data/restrooms_baseline_public.csv";
 
-  /* ---------------- HELPERS ---------------- */
   const $ = (id) => document.getElementById(id);
   const toBool = (v) => ["true", "yes", "1"].includes(String(v).toLowerCase());
   const esc = (s) =>
@@ -20,32 +18,31 @@ document.addEventListener("DOMContentLoaded", () => {
       "'": "&#39;",
     }[c]));
 
-  /* ---------------- ELEMENTS ---------------- */
   const panel = $("panel");
   const form = $("surveyForm");
   const submitBtn = $("submitBtn");
   const statusEl = $("status");
 
   if (!panel || !form || !submitBtn || !statusEl) {
-    console.error("Missing required elements (#panel, #surveyForm, #submitBtn, #status).");
+    console.error("Missing #panel, #surveyForm, #submitBtn, or #status");
     return;
   }
 
+  const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
+
+  // FORM elements
   const placeIdEl = $("place_id");
   const actionEl = $("action");
-
   const auditDatetimeEl = $("audit_datetime");
   const restroomNameEl = $("restroom_name");
   const researcherNameEl = $("researcher_name");
   const addressEl = $("address");
   const latEl = $("latitude");
   const lngEl = $("longitude");
-
   const openWhenVisitedEl = $("open_when_visited");
   const hoursEl = $("advertised_hours");
   const accessMethodEl = $("access_method");
   const findabilityEl = $("findability");
-
   const genderNeutralEl = $("gender_neutral");
   const menstrualProductsEl = $("menstrual_products");
   const showersEl = $("showers_available");
@@ -53,14 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const signageEl = $("visible_signage");
   const camerasEl = $("security_cameras");
   const adaEl = $("ada_accessible");
-
   const accessBarriersEl = $("access_barriers");
   const impressionsEl = $("overall_impressions");
   const outsideEl = $("outside_context");
   const notesEl = $("notes");
 
-  /* ---------------- MAP ---------------- */
-  const leafletMap = L.map("map").setView([32.7157, -117.1611], 12);
+  // MAP init (wrap in try so if Leaflet fails we get an error)
+  let leafletMap;
+  try {
+    leafletMap = L.map("map").setView([32.7157, -117.1611], 12);
+  } catch (e) {
+    console.error("Leaflet failed to initialize. Check leaflet.js loaded.", e);
+    return;
+  }
+
   window.leafletMap = leafletMap;
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -69,7 +72,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }).addTo(leafletMap);
 
   const leafletMarkers = L.layerGroup().addTo(leafletMap);
-  window.leafletMarkers = leafletMarkers;
 
   function safeInvalidate() {
     try { leafletMap.invalidateSize(); } catch (_) {}
@@ -78,24 +80,21 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("load", () => setTimeout(safeInvalidate, 250));
   window.addEventListener("resize", () => setTimeout(safeInvalidate, 120));
 
-  /* ---------------- PANEL ---------------- */
-  const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
-
+  // Panel open/close only matters on mobile (desktop is always visible)
   function openPanel() {
-    // On desktop panel is already visible, but keeping this is harmless
-    panel.classList.add("open");
+    if (isMobile()) panel.classList.add("open");
     setTimeout(safeInvalidate, 250);
     updateMobileToggleLabel();
   }
 
-  function togglePanelMobileOnly() {
+  function togglePanel() {
     if (!isMobile()) return;
     panel.classList.toggle("open");
     setTimeout(safeInvalidate, 250);
     updateMobileToggleLabel();
   }
 
-  $("drawerHeader")?.addEventListener("click", togglePanelMobileOnly);
+  $("drawerHeader")?.addEventListener("click", togglePanel);
 
   function setMode(mode) {
     const m = $("modeIndicator");
@@ -108,38 +107,28 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Suggest a new restroom location";
   }
 
-  /* ---------------- MOBILE TOGGLE (Map/Form) ---------------- */
+  // Mobile toggle button
   const mobileToggleBtn = $("mobileToggleBtn");
   const mobileToggleLabel = $("mobileToggleLabel");
 
   function updateMobileToggleLabel() {
-    if (!mobileToggleBtn || !mobileToggleLabel) return;
-
-    // Only meaningful on mobile; CSS hides it on desktop
-    if (!isMobile()) return;
-
+    if (!mobileToggleLabel) return;
+    if (!isMobile()) return; // hidden by CSS
     const isOpen = panel.classList.contains("open");
     mobileToggleLabel.textContent = isOpen ? "Map" : "Form";
   }
 
-  if (mobileToggleBtn) {
-    mobileToggleBtn.addEventListener("click", () => {
-      if (!isMobile()) return;
-      panel.classList.toggle("open");
-      updateMobileToggleLabel();
-      setTimeout(safeInvalidate, 250);
-    });
-  }
-
+  mobileToggleBtn?.addEventListener("click", togglePanel);
   window.addEventListener("resize", updateMobileToggleLabel);
+  updateMobileToggleLabel();
 
-  /* ---------------- CSV ---------------- */
+  // CSV loading
   async function loadCsv(url) {
     const t = await (await fetch(url)).text();
     return Papa.parse(t, { header: true, skipEmptyLines: true }).data;
   }
 
-  /* ---------------- MARKERS ---------------- */
+  // Markers
   function popupHtml(r) {
     return `
       <strong>${esc(r.restroom_name || r.name)}</strong><br>
@@ -161,17 +150,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       m.on("popupopen", (e) => {
         const btn = e.popup.getElement().querySelector("[data-update]");
-        if (btn) {
-          btn.onclick = () => {
-            fillForm(r, "update");
-            openPanel();
-          };
-        }
+        if (btn) btn.onclick = () => { fillForm(r, "update"); openPanel(); };
       });
     });
   }
 
-  /* ---------------- FORM FILL ---------------- */
+  // Fill form
   function fillForm(r, mode) {
     placeIdEl.value = r.globalid || r.place_id || "";
     actionEl.value = mode;
@@ -218,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => restroomNameEl?.focus(), 200);
   });
 
-  /* ---------------- SUBMIT ---------------- */
+  // Submit
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -238,21 +222,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const payload = {
       place_id: placeIdEl.value,
       action: actionEl.value,
-
       audit_datetime: auditDatetimeEl.value,
       restroom_name: restroomNameEl.value,
       researcher_name: researcherNameEl.value,
-
       address: addressEl.value,
       latitude: latEl.value,
       longitude: lngEl.value,
-
       open_when_visited: openWhenVisitedEl.value,
       advertised_hours: hoursEl.value,
-
       access_method: accessMethodEl.value,
       findability: findabilityEl.value,
-
       gender_neutral: genderNeutralEl.value,
       menstrual_products: menstrualProductsEl.value,
       showers_available: showersEl.value,
@@ -260,7 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
       visible_signage: signageEl.value,
       security_cameras: camerasEl.value,
       ada_accessible: adaEl.value,
-
       access_barriers: accessBarriersEl.value,
       overall_impressions: impressionsEl.value,
       outside_context: outsideEl.value,
@@ -281,8 +259,8 @@ document.addEventListener("DOMContentLoaded", () => {
       form.reset();
       setMode("new");
 
-      // Keep open (desktop + mobile)
-      panel.classList.add("open");
+      // Keep open on desktop; on mobile keep open too
+      if (isMobile()) panel.classList.add("open");
       panel.scrollTop = 0;
       updateMobileToggleLabel();
 
@@ -295,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /* ---------------- INIT ---------------- */
+  // INIT
   (async () => {
     try {
       const baseline = await loadCsv(BASELINE_CSV_URL);
