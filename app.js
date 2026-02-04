@@ -1,3 +1,5 @@
+// app.js (FULL, cleaned, with temp pin + GPS button)
+// NOTE: no mobile map/survey toggle button in this version
 document.addEventListener("DOMContentLoaded", () => {
   /* ---------------- CONFIG ---------------- */
   const APPS_SCRIPT_URL =
@@ -71,6 +73,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  // Avoid global name collisions with the #map element
+  window.leafletMap = leafletMap;
+
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "&copy; OpenStreetMap contributors",
@@ -85,31 +90,35 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("load", () => setTimeout(safeInvalidate, 250));
   window.addEventListener("resize", () => setTimeout(safeInvalidate, 120));
 
-  /* ---------------- DRAFT (TEMP) MARKER ---------------- */
+  /* ---------------- DRAFT MARKER (TEMP PIN) ---------------- */
   let draftMarker = null;
 
   function setDraftMarker(lat, lng) {
-    if (draftMarker) leafletMap.removeLayer(draftMarker);
+    if (draftMarker) {
+      leafletMap.removeLayer(draftMarker);
+      draftMarker = null;
+    }
     draftMarker = L.marker([lat, lng], { keyboard: false }).addTo(leafletMap);
     draftMarker.bindPopup("New restroom location").openPopup();
   }
 
   function clearDraftMarker() {
-    if (!draftMarker) return;
-    leafletMap.removeLayer(draftMarker);
-    draftMarker = null;
+    if (draftMarker) {
+      leafletMap.removeLayer(draftMarker);
+      draftMarker = null;
+    }
   }
 
   /* ---------------- PANEL CONTROL ---------------- */
   function openPanel() {
     if (isMobile()) panel.classList.add("open");
-    setTimeout(safeInvalidate, 200);
+    setTimeout(safeInvalidate, 250);
   }
 
   function togglePanel() {
     if (!isMobile()) return;
     panel.classList.toggle("open");
-    setTimeout(safeInvalidate, 200);
+    setTimeout(safeInvalidate, 250);
   }
 
   $("drawerHeader")?.addEventListener("click", togglePanel);
@@ -156,11 +165,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       m.on("popupopen", (e) => {
         const root = e.popup.getElement();
-        const btn = root?.querySelector("[data-update]");
+        if (!root) return;
+        const btn = root.querySelector("[data-update]");
         if (!btn) return;
 
         btn.onclick = () => {
-          clearDraftMarker(); // no temp marker when editing existing
+          clearDraftMarker(); // don’t show draft pin when editing existing
           fillForm(r, "update");
           openPanel();
         };
@@ -170,36 +180,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- FILL FORM ---------------- */
   function fillForm(r, mode) {
-    placeIdEl.value = r.globalid || r.place_id || "";
-    actionEl.value = mode;
+    if (placeIdEl) placeIdEl.value = r.globalid || r.place_id || "";
+    if (actionEl) actionEl.value = mode;
+
     setMode(mode);
 
-    auditDatetimeEl.value = r.audit_datetime || "";
-    restroomNameEl.value = r.restroom_name || r.name || "";
-    researcherNameEl.value = r.researcher_name || "";
+    if (auditDatetimeEl) auditDatetimeEl.value = r.audit_datetime || "";
+    if (restroomNameEl) restroomNameEl.value = r.restroom_name || r.name || "";
+    if (researcherNameEl) researcherNameEl.value = r.researcher_name || "";
 
-    addressEl.value = r.address || "";
-    latEl.value = r.latitude || "";
-    lngEl.value = r.longitude || "";
+    if (addressEl) addressEl.value = r.address || "";
+    if (latEl) latEl.value = r.latitude || "";
+    if (lngEl) lngEl.value = r.longitude || "";
 
-    openWhenVisitedEl.value = r.open_when_visited || "";
-    hoursEl.value = r.advertised_hours || r.hours || "";
+    if (openWhenVisitedEl) openWhenVisitedEl.value = r.open_when_visited || "";
+    if (hoursEl) hoursEl.value = r.advertised_hours || r.hours || "";
 
-    accessMethodEl.value = r.access_method || "";
-    findabilityEl.value = r.findability || "";
+    if (accessMethodEl) accessMethodEl.value = r.access_method || "";
+    if (findabilityEl) findabilityEl.value = r.findability || "";
 
-    genderNeutralEl.value = r.gender_neutral || "";
-    menstrualProductsEl.value = r.menstrual_products || "";
-    showersEl.value = r.showers_available || "";
-    waterRefillEl.value = r.water_refill_nearby || "";
-    signageEl.value = r.visible_signage || "";
-    camerasEl.value = r.security_cameras || "";
-    adaEl.value = r.ada_accessible || "";
+    if (genderNeutralEl) genderNeutralEl.value = r.gender_neutral || "";
+    if (menstrualProductsEl) menstrualProductsEl.value = r.menstrual_products || "";
+    if (showersEl) showersEl.value = r.showers_available || "";
+    if (waterRefillEl) waterRefillEl.value = r.water_refill_nearby || "";
+    if (signageEl) signageEl.value = r.visible_signage || "";
+    if (camerasEl) camerasEl.value = r.security_cameras || "";
+    if (adaEl) adaEl.value = r.ada_accessible || "";
 
-    accessBarriersEl.value = r.access_barriers || "";
-    impressionsEl.value = r.overall_impressions || "";
-    outsideEl.value = r.outside_context || "";
-    notesEl.value = r.notes || "";
+    if (accessBarriersEl) accessBarriersEl.value = r.access_barriers || "";
+    if (impressionsEl) impressionsEl.value = r.overall_impressions || "";
+    if (outsideEl) outsideEl.value = r.outside_context || "";
+    if (notesEl) notesEl.value = r.notes || "";
   }
 
   /* ---------------- MAP CLICK -> NEW RESTROOM ---------------- */
@@ -207,27 +218,67 @@ document.addEventListener("DOMContentLoaded", () => {
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
 
-    setDraftMarker(lat, lng); // ✅ temp pin (mobile + desktop)
+    setDraftMarker(lat, lng);
     fillForm({ latitude: lat, longitude: lng }, "new");
     openPanel();
   });
 
   /* ---------------- NEW RESTROOM BUTTON ---------------- */
-  $("newRestroomBtn")?.addEventListener("click", () => {
-    // This button just prepares the form; user still clicks map to choose a point
-    clearDraftMarker();
-    form.reset();
-    actionEl.value = "new";
-    setMode("new");
-    openPanel();
-    setTimeout(() => restroomNameEl.focus(), 150);
-  });
+  const newRestroomBtn = $("newRestroomBtn");
+  if (newRestroomBtn) {
+    newRestroomBtn.addEventListener("click", () => {
+      clearDraftMarker();
+      form.reset();
+      if (actionEl) actionEl.value = "new";
+      setMode("new");
+      openPanel();
+      setTimeout(() => restroomNameEl?.focus(), 200);
+    });
+  }
+
+  /* ---------------- GPS BUTTON ---------------- */
+  const useLocationBtn = $("useLocationBtn");
+  if (useLocationBtn && "geolocation" in navigator) {
+    useLocationBtn.addEventListener("click", () => {
+      useLocationBtn.disabled = true;
+      useLocationBtn.textContent = "Locating…";
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          leafletMap.setView([lat, lng], 17);
+          setDraftMarker(lat, lng);
+
+          if (latEl) latEl.value = lat.toFixed(6);
+          if (lngEl) lngEl.value = lng.toFixed(6);
+
+          openPanel();
+
+          useLocationBtn.textContent = "Use my location";
+          useLocationBtn.disabled = false;
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+          alert("Unable to access your location. You can tap the map instead.");
+
+          useLocationBtn.textContent = "Use my location";
+          useLocationBtn.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  } else if (useLocationBtn) {
+    // Browser doesn't support geolocation
+    useLocationBtn.disabled = true;
+    useLocationBtn.textContent = "Location not available";
+  }
 
   /* ---------------- SUBMIT ---------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // iPhone/Safari help: reveal where the invalid field is
     if (!form.reportValidity()) {
       const invalid = form.querySelector(":invalid");
       if (invalid) {
@@ -243,35 +294,35 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.disabled = true;
 
     const payload = {
-      place_id: placeIdEl.value,
-      action: actionEl.value,
+      place_id: placeIdEl ? placeIdEl.value : "",
+      action: actionEl ? actionEl.value : "new",
 
-      audit_datetime: auditDatetimeEl.value,
-      restroom_name: restroomNameEl.value,
-      researcher_name: researcherNameEl.value,
+      audit_datetime: auditDatetimeEl ? auditDatetimeEl.value : "",
+      restroom_name: restroomNameEl ? restroomNameEl.value : "",
+      researcher_name: researcherNameEl ? researcherNameEl.value : "",
 
-      address: addressEl.value,
-      latitude: latEl.value,
-      longitude: lngEl.value,
+      address: addressEl ? addressEl.value : "",
+      latitude: latEl ? latEl.value : "",
+      longitude: lngEl ? lngEl.value : "",
 
-      open_when_visited: openWhenVisitedEl.value, // now includes "Permanently closed"
-      advertised_hours: hoursEl.value,
+      open_when_visited: openWhenVisitedEl ? openWhenVisitedEl.value : "",
+      advertised_hours: hoursEl ? hoursEl.value : "",
 
-      access_method: accessMethodEl.value,
-      findability: findabilityEl.value,
+      access_method: accessMethodEl ? accessMethodEl.value : "",
+      findability: findabilityEl ? findabilityEl.value : "",
 
-      gender_neutral: genderNeutralEl.value,
-      menstrual_products: menstrualProductsEl.value,
-      showers_available: showersEl.value,
-      water_refill_nearby: waterRefillEl.value,
-      visible_signage: signageEl.value,
-      security_cameras: camerasEl.value,
-      ada_accessible: adaEl.value,
+      gender_neutral: genderNeutralEl ? genderNeutralEl.value : "",
+      menstrual_products: menstrualProductsEl ? menstrualProductsEl.value : "",
+      showers_available: showersEl ? showersEl.value : "",
+      water_refill_nearby: waterRefillEl ? waterRefillEl.value : "",
+      visible_signage: signageEl ? signageEl.value : "",
+      security_cameras: camerasEl ? camerasEl.value : "",
+      ada_accessible: adaEl ? adaEl.value : "",
 
-      access_barriers: accessBarriersEl.value,
-      overall_impressions: impressionsEl.value,
-      outside_context: outsideEl.value,
-      notes: notesEl.value,
+      access_barriers: accessBarriersEl ? accessBarriersEl.value : "",
+      overall_impressions: impressionsEl ? impressionsEl.value : "",
+      outside_context: outsideEl ? outsideEl.value : "",
+      notes: notesEl ? notesEl.value : "",
     };
 
     try {
@@ -289,15 +340,14 @@ document.addEventListener("DOMContentLoaded", () => {
       setMode("new");
       panel.scrollTop = 0;
 
-      clearDraftMarker(); // ✅ reset temp pin after submit
+      clearDraftMarker(); // reset temp pin after submit
 
-      // Keep panel usable after submit (mobile + desktop)
       if (isMobile()) panel.classList.add("open");
-
-      setTimeout(safeInvalidate, 200);
+      setTimeout(safeInvalidate, 250);
     } catch (err) {
       console.error(err);
-      statusEl.textContent = "Submit failed. Please check your connection and try again.";
+      statusEl.textContent =
+        "Submit failed. Please check your connection and try again.";
       submitBtn.textContent = "Submit suggestion";
       submitBtn.disabled = false;
     }
@@ -307,12 +357,17 @@ document.addEventListener("DOMContentLoaded", () => {
   (async () => {
     try {
       const baseline = await loadCsv(BASELINE_CSV_URL);
-      const updates = (await loadCsv(UPDATES_CSV_URL)).filter((r) => toBool(r.approved));
+      const updates = (await loadCsv(UPDATES_CSV_URL)).filter((r) =>
+        toBool(r.approved)
+      );
 
       const latest = {};
       updates.forEach((u) => {
         if (!u.place_id) return;
-        if (!latest[u.place_id] || Date.parse(u.timestamp) > Date.parse(latest[u.place_id].timestamp)) {
+        if (
+          !latest[u.place_id] ||
+          Date.parse(u.timestamp) > Date.parse(latest[u.place_id].timestamp)
+        ) {
           latest[u.place_id] = u;
         }
       });
